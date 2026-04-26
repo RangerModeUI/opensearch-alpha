@@ -1,0 +1,75 @@
+version: '3.8'
+
+networks:
+  opensearch-net:
+    driver: bridge
+
+volumes:
+  opensearch-data:
+
+services:
+
+  opensearch:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: opensearch
+
+    environment:
+     - discovery.type=single-node
+     - network.host=0.0.0.0
+     - plugins.security.disabled=false
+     - OPENSEARCH_USERNAME=admin
+     - OPENSEARCH_INITIAL_ADMIN_PASSWORD=DD722icQ!
+     - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+
+    ports:
+      - "9200:9200"
+
+    networks:
+      - opensearch-net
+
+  dashboards:
+    image: opensearchproject/opensearch-dashboards:2.14.0
+    container_name: dashboards
+
+    environment:
+      - OPENSEARCH_HOSTS=["https://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=false
+      - OPENSEARCH_SSL_VERIFICATIONMODE=none
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=DD722icQ!
+      - SERVER_HOST=0.0.0.0
+
+    ports:
+      - "5601:5601"
+
+    depends_on:
+      - opensearch
+
+    networks:
+      - opensearch-net
+
+
+  logstash:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:8.9.0
+    container_name: logstash
+
+    volumes:
+      - /apps/opensearch/logstash/pipeline:/usr/share/logstash/pipeline:ro
+
+    ports:
+      - "514:514/udp"
+      - "514:514/tcp"
+
+    depends_on:
+      - opensearch
+
+    networks:
+      - opensearch-net
